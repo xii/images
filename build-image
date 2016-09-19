@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+function info() { echo -e "\033[0;34m[INFO ]   $@\033[0m"; }
+function section() { echo -e "\n\033[1;34m[INFO ] $@...\033[0m"; }
+function warn() { echo -e "\033[1;31m[WARN ] $@\033[0m"; }
+function fatal() { echo -e "\033[0;31m[FATAL] $@\033[0m"; exit 1; }
+
+IMAGE_BUILDER_REPO=""
+PACKER_URL="https://releases.hashicorp.com/packer/0.10.1/packer_0.10.1_linux_amd64.zip"
+BIN_PATH="$(pwd)/bin"
+TMP_PATH="$(pwd)/tmp"
+IMAGE_PATH="$(pwd)/images"
+
+# check if image name exists
+if [ "x$1" != "x" ]; then
+  DISTRO=$1
+fi
+
+if [ -z ${DISTRO} ]; then
+  warn  "No image specified to build."
+  fatal "export \$DISTRO or use command line"
+fi
+
+# check if provider exists
+PROVIDER=${PROVIDER:-"qemu"}
+if [ "x$2" != "x" ]; then
+  PROVIDER=$2
+fi
+
+# check arch
+ARCH=${ARCH:-x86_64}
+if [ "x$3" != "x" ]; then
+  ARCH=$3
+fi
+
+# get provider image format
+case ${PROVIDER} in
+  qemu)
+    PROVIDER_FORMAT="qcow2"
+    ;;
+  virtualbox)
+    PROVIDER_FORMAT="box"
+    ;;
+  *)
+    fatal "Invalid provider selected.."
+    ;;
+esac
+
+# define variables needed
+DEFINITION=definitions/${DISTRO}.json
+IMAGE=${IMAGE_PATH}/${DISTRO}-${ARCH}.${PROVIDER_FORMAT}
+
+section "Setup environment" #--------------------------------------------------
+if [ ! -d ${TMP_PATH} ]; then
+  mkdir ${TMP_PATH}
+fi
+
+if [ ! -d ${IMAGE_PATH} ]; then
+  mkdir ${IMAGE_PATH}
+fi
+
+if [ ! -d ${BIN_PATH} ]; then
+  info "Downloading packer..."
+  mkdir bin
+  wget ${PACKER_URL} -O ${TMP_PATH}/packer.zip
+  unzip ${TMP_PATH}/packer.zip -d ${BIN_PATH}
+fi
+
+PATH=${BIN_PATH}:${PATH}
+
+
+
+section "Variables:" #---------------------------------------------------------
+info "distribution : ${DISTRO}"
+info "provider     : ${PROVIDER}"
+info "arch         : ${ARCH}"
+echo ""
+info "image dir    : ${IMAGE_PATH}"
+info "definition   : ${DEFINITION}"
+echo ""
+info "image        : ${IMAGE}"
+
+section "Run packer" #---------------------------------------------------------
+
+packer build -parallel=false -only=${PROVIDER}-${ARCH} ${DEFINITION}

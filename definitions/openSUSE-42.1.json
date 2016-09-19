@@ -1,0 +1,114 @@
+{
+  "variables": {
+    "os": "42.1",
+    "arch": "x86_64",
+
+    "headless": "false",
+
+    "iso_url": "http://download.opensuse.org/distribution/leap/42.1/iso/openSUSE-Leap-42.1-NET-x86_64.iso",
+    "iso_checksum": "7667262584cc4936673578b5242efdff86cc1434ce60a25324faad7a2a36dbd7",
+    "iso_checksum_type": "sha256",
+
+    "memory": "1024",
+    "cpus": "1",
+
+    "ssh_user": "root",
+    "ssh_pw": "linux"
+  },
+  "builders": [
+    {
+      "name": "qemu-x86_64",
+      "type": "qemu",
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+
+      "accelerator": "kvm",
+      "disk_interface": "virtio",
+      "net_device": "virtio-net",
+      "format": "qcow2",
+      "vm_name": "opensuse-{{user `os`}}-{{user `arch`}}",
+
+      "output_directory": "images/openSUSE-{{user `os`}}-{{user `arch`}}",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_password": "{{user `ssh_pw`}}",
+      "ssh_wait_timeout": "1000s",
+      "disk_size": 20480,
+      "ssh_port": 22,
+      "headless": "{{user `headless`}}",
+      "http_directory": "http/opensuse/{{user `os`}}",
+      "shutdown_command": "systemctl poweroff",
+      "boot_command": [
+        "<esc><enter><wait>",
+        "linux ",
+        "biosdevname=0 ",
+        "net.ifnames=0 ",
+        "netdevice=eth0 ",
+        "netsetup=dhcp ",
+        "lang=en_US.utf8 ",
+        "textmode=1 ",
+        "autoyast=http://{{.HTTPIP}}:{{.HTTPPort}}/qemu.xml ",
+        "<enter><wait>"
+      ],
+
+      "qemuargs": [
+        [ "-m", "{{user `memory`}}M" ]
+      ]
+    },
+    {
+      "name": "virtualbox-x86_64",
+      "type": "virtualbox-iso",
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+
+      "vm_name": "opensuse-{{user `os`}}-{{user `arch`}}",
+      "guest_os_type": "OpenSUSE_64",
+      "guest_additions_mode": "disable",
+      "hard_drive_interface": "sata",
+
+      "vboxmanage": [
+        ["modifyvm", "{{.Name}}", "--memory", "{{user `memory`}}"],
+        ["modifyvm", "{{.Name}}", "--cpus", "{{user `cpus`}}"]
+      ],
+
+      "output_directory": "images/openSUSE-{{user `os`}}-{{user `arch`}}",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_password": "{{user `ssh_pw`}}",
+      "ssh_wait_timeout": "1000s",
+      "disk_size": 20480,
+      "ssh_port": 22,
+      "headless": "{{user `headless`}}",
+      "http_directory": "http/opensuse/42.1",
+      "shutdown_command": "systemctl poweroff",
+      "boot_command": [
+        "<esc><enter><wait>",
+        "linux ",
+        "biosdevname=0 ",
+        "net.ifnames=0 ",
+        "netdevice=eth0 ",
+        "netsetup=dhcp ",
+        "lang=en_US.utf8 ",
+        "textmode=1 ",
+        "autoyast=http://{{.HTTPIP}}:{{.HTTPPort}}/virtualbox.xml",
+        "<enter><wait>"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/opensuse/disable_multiversion.sh",
+        "scripts/opensuse/42.1/repositories.sh",
+        "scripts/common/sshd.sh",
+        "scripts/common/gen_ssh_server_key.sh",
+        "scripts/opensuse/enable_networkmanager.sh",
+        "scripts/opensuse/cleanup.sh",
+        "scripts/common/zerodisk.sh"
+      ]
+    }
+  ]
+}

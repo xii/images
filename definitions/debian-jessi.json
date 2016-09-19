@@ -1,0 +1,65 @@
+{
+  "variables": {
+    "os": "jessi",
+    "arch": "x86_64",
+
+    "headless": "false",
+
+    "iso_url": "http://cdimage.debian.org/debian-cd/8.5.0/amd64/iso-cd/debian-8.5.0-amd64-netinst.iso",
+    "iso_checksum": "ad4e8c27c561ad8248d5ebc1d36eb172f884057bfeb2c22ead823f59fa8c3dff",
+    "iso_checksum_type": "sha256",
+
+    "memory": "1024",
+    "cpus": "1",
+    "disk_size": "40000",
+
+    "ssh_user": "root",
+    "ssh_pw": "linux"
+  },
+  "builders": [
+    {
+      "name": "qemu-x86_64",
+      "type": "qemu",
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+
+      "accelerator": "kvm",
+      "disk_interface": "virtio",
+      "net_device": "virtio-net",
+      "format": "qcow2",
+      "vm_name": "debian-{{user `os`}}-{{user `arch`}}",
+
+      "output_directory": "images/debian-{{user `os`}}-{{user `arch`}}",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_password": "{{user `ssh_pw`}}",
+      "ssh_wait_timeout": "1000s",
+      "disk_size": "{{user `disk_size`}}",
+      "ssh_port": 22,
+      "headless": "{{user `headless`}}",
+      "http_directory": "http/debian/{{user `os`}}",
+      "shutdown_command": "systemctl poweroff",
+      "boot_wait": "5s",
+      "boot_command": [
+        "<esc><wait>",
+        "auto ",
+        "preseed/url=http://{{.HTTPIP}}:{{.HTTPPort}}/preseed.cfg ",
+        "<enter>"
+      ],
+
+      "qemuargs": [
+        [ "-m", "{{user `memory`}}M" ]
+      ]
+
+    }],
+    "provisioners": [{
+      "type": "shell",
+      "scripts": [
+        "scripts/common/sshd.sh",
+        "scripts/debian/cleanup.sh",
+        "scripts/common/zerodisk.sh"
+      ]
+    }]
+}
+

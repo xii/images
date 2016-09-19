@@ -1,0 +1,65 @@
+{
+  "variables": {
+    "os": "7",
+    "arch": "x86_64",
+
+    "headless": "false",
+
+    "iso_url": "http://mirrors.kernel.org/centos/7.2.1511/isos/x86_64/CentOS-7-x86_64-NetInstall-1511.iso",
+    "iso_checksum": "9ed9ffb5d89ab8cca834afce354daa70a21dcb410f58287d6316259ff89758f5",
+    "iso_checksum_type": "sha256",
+
+    "memory": "1024",
+    "cpus": "1",
+    "disk_size": "40000",
+
+    "ssh_user": "root",
+    "ssh_pw": "linux"
+  },
+
+  "builders": [
+    {
+      "name": "qemu-x86_64",
+      "type": "qemu",
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+
+      "accelerator": "kvm",
+      "disk_interface": "virtio",
+      "net_device": "virtio-net",
+      "format": "qcow2",
+      "vm_name": "centos-{{user `os`}}-{{user `arch`}}",
+
+      "output_directory": "images/centos-{{user `os`}}-{{user `arch`}}",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_password": "{{user `ssh_pw`}}",
+      "ssh_wait_timeout": "1000s",
+      "disk_size": "{{user `disk_size`}}",
+      "ssh_port": 22,
+      "headless": "{{user `headless`}}",
+      "http_directory": "http/centos/7",
+      "shutdown_command": "systemctl poweroff",
+      "boot_command": [
+        "<esc>",
+        "<wait>",
+        "linux inst.ks=http://{{.HTTPIP}}:{{.HTTPPort}}/anaconda-ks.cfg biosdevname=0 net.ifnames=0",
+        "<enter>"
+      ],
+
+      "qemuargs": [
+        [ "-m", "{{user `memory`}}M" ]
+      ]
+    }],
+    "provisioners": [{
+      "type": "shell",
+      "scripts": [
+        "scripts/centos/7/epel.sh",
+        "scripts/common/sshd.sh",
+        "scripts/centos/locale.sh",
+        "scripts/centos/7/cleanup.sh",
+        "scripts/common/zerodisk.sh"
+      ]
+    }]
+}
